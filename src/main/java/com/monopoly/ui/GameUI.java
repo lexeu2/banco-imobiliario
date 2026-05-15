@@ -43,7 +43,7 @@ public class GameUI implements GameObserver {
     
     private void initializeUI() {
         root = new BorderPane();
-        root.setPadding(new Insets(10));
+        root.setPadding(new Insets(5));
         
         // Top - Menu
         MenuBar menuBar = new MenuBar();
@@ -65,15 +65,15 @@ public class GameUI implements GameObserver {
         root.setCenter(boardPanel);
         
         // Right - Players
-        playerList = new VBox(10);
-        playerList.setPadding(new Insets(10));
-        playerList.setPrefWidth(200);
+        playerList = new VBox(5);
+        playerList.setPadding(new Insets(5));
+        playerList.setPrefWidth(180);
         playerList.setStyle("-fx-background-color: #F5F5F5;");
         root.setRight(playerList);
         
         // Bottom - Controls
-        HBox controls = new HBox(10);
-        controls.setPadding(new Insets(10));
+        HBox controls = new HBox(8);
+        controls.setPadding(new Insets(5));
         
         Button rollBtn = new Button("Roll Dice (2D6)");
         rollBtn.setOnAction(e -> {
@@ -89,6 +89,13 @@ public class GameUI implements GameObserver {
         });
         buyBtn.setStyle("-fx-font-size: 14px; -fx-padding: 8px 16px;");
         
+        Button buildBtn = new Button("Build House");
+        buildBtn.setOnAction(e -> {
+            facade.buildHouse();
+            updateDisplay();
+        });
+        buildBtn.setStyle("-fx-font-size: 14px; -fx-padding: 8px 16px;");
+        
         Button endBtn = new Button("End Turn");
         endBtn.setOnAction(e -> {
             facade.endTurn();
@@ -96,18 +103,37 @@ public class GameUI implements GameObserver {
         });
         endBtn.setStyle("-fx-font-size: 14px; -fx-padding: 8px 16px;");
         
-        statusLabel = new Label("Welcome to Monopoly!");
+        // Debug jump
+        TextField jumpField = new TextField();
+        jumpField.setPromptText("Pos (0-39)");
+        jumpField.setPrefWidth(70);
+        
+        Button jumpBtn = new Button("Go");
+        jumpBtn.setOnAction(e -> {
+            try {
+                int pos = Integer.parseInt(jumpField.getText());
+                facade.movePlayerTo(pos);
+                updateDisplay();
+            } catch (NumberFormatException ex) {
+                // ignore
+            }
+        });
+        
+        statusLabel = new Label("Welcome!");
         diceLabel = new Label("Dice: -");
         
-        controls.getChildren().addAll(rollBtn, buyBtn, endBtn, 
-                                       new Separator(), statusLabel, diceLabel);
+        controls.getChildren().addAll(rollBtn, buyBtn, buildBtn, endBtn,
+                                       new Separator(),
+                                       jumpField, jumpBtn,
+                                       new Separator(),
+                                       statusLabel, diceLabel);
         
         // Game Log
         gameLog = new TextArea();
         gameLog.setEditable(false);
-        gameLog.setPrefRowCount(4);
+        gameLog.setPrefRowCount(3);
         
-        VBox bottomSection = new VBox(5, controls, gameLog);
+        VBox bottomSection = new VBox(2, controls, gameLog);
         root.setBottom(bottomSection);
     }
     
@@ -157,6 +183,12 @@ public class GameUI implements GameObserver {
         Game game = facade.getCurrentGame();
         if (game == null) return;
         
+        // Check game over
+        if (facade.isGameOver()) {
+            statusLabel.setText("GAME OVER!");
+            return;
+        }
+        
         // Update board
         boardPanel.updateBoard(game);
         
@@ -175,7 +207,7 @@ public class GameUI implements GameObserver {
             Label nameLabel = new Label(p.getName());
             nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
             
-            Label moneyLabel = new Label("$" + String.format("%.0f", p.getMoney()));
+            Label moneyLabel = new Label("R$" + String.format("%.0f", p.getMoney()));
             
             Label posLabel = new Label("Position: " + p.getPosition());
             
@@ -184,6 +216,18 @@ public class GameUI implements GameObserver {
                 Label onLabel = new Label("On: " + landed.getName());
                 onLabel.setStyle("-fx-font-size: 10px;");
                 playerCard.getChildren().addAll(nameLabel, moneyLabel, posLabel, onLabel);
+                
+                if (landed.getOwner() != null && landed.getOwner() != p) {
+                    Label rentLabel = new Label("Rent: R$" + (int)landed.getRent());
+                    rentLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: red;");
+                    playerCard.getChildren().add(rentLabel);
+                }
+                
+                if (landed.getOwner() == p) {
+                    Label houseLabel = new Label("Houses: " + landed.getHouses() + " | Cost: R$" + (int)landed.getHouseCost());
+                    houseLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: blue;");
+                    playerCard.getChildren().add(houseLabel);
+                }
             } else {
                 playerCard.getChildren().addAll(nameLabel, moneyLabel, posLabel);
             }

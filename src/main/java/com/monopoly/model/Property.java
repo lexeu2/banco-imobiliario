@@ -53,4 +53,8 @@ public class Property {
     
     public void addHouse() { if (houses < 5) houses++; }
     public boolean hasHotel() { return houses == 5; }
+    
+    public double getHouseCost() {
+        return price * 0.5;
+    }
 }
